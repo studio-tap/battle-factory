@@ -34,44 +34,100 @@
 - シンプルで分かりやすいUI/UXを心がける。
 - レスポンシブデザインに対応し、スマートフォンでも快適に閲覧できるようにする。
 
-## 7. データベース設計（案）
+## 7. データベース設計
 
-初期段階として、以下のテーブルを想定する。各テーブルはリレーションで結ばれる。
+アプリケーションで利用する主要なテーブルは以下の9つを想定する。
 
-### `pokemons` - ポケモンマスター
-ポケモンの不変的な情報を格納する。
-
-| カラム名 | 型 | 説明 | 例 |
-| :--- | :--- | :--- | :--- |
-| `id` | `SERIAL` | 主キー | `1` |
-| `pokedex_id` | `INTEGER` | 全国図鑑No. | `25` |
-| `name` | `VARCHAR(255)` | ポケモン名 | `ピカチュウ` |
-| `base_stats` | `JSONB` | 種族値 (H,A,B,C,D,S) | `{"hp": 35, "attack": 55, ...}` |
-| `type1_id` | `INTEGER` | タイプ1 (types.idへのFK) | `13` (でんき) |
-| `type2_id` | `INTEGER` | タイプ2 (types.idへのFK) | `NULL` |
-
-### `moves` - 技マスター
-技の情報を格納する。
-
-| カラム名 | 型 | 説明 | 例 |
-| :--- | :--- | :--- | :--- |
-| `id` | `SERIAL` | 主キー | `85` |
-| `name` | `VARCHAR(255)` | 技名 | `１０まんボルト` |
-| `type_id` | `INTEGER` | タイプ (types.idへのFK) | `13` (でんき) |
-| `power` | `INTEGER` | 威力 | `95` |
-| `accuracy` | `INTEGER` | 命中率 | `100` |
-| `pp` | `INTEGER` | PP | `15` |
-| `category` | `VARCHAR(50)` | 分類（物理/特殊/変化） | `特殊` |
-
-### `rental_pokemon_sets` - レンタルポケモンセット
-バトルファクトリーで実際にレンタルできるポケモンの個体情報を格納する。
-
+### 1. `pokemons` - ポケモンマスター
+ポケモンの種族としての基本情報を格納する。
 | カラム名 | 型 | 説明 |
-| :--- | :--- | :--- |
+|:---|:---|:---|
+| `id` | `SERIAL` | 主キー |
+| `pokedex_number` | `INTEGER` | 全国図鑑No. |
+| `name` | `VARCHAR(255)` | ポケモン名（フォルム名含む） |
+| `h` | `INTEGER` | 種族値: HP |
+| `a` | `INTEGER` | 種族値: こうげき |
+| `b` | `INTEGER` | 種族値: ぼうぎょ |
+| `c` | `INTEGER` | 種族値: とくこう |
+| `d` | `INTEGER` | 種族値: とくぼう |
+| `s` | `INTEGER` | 種族値: すばやさ |
+| `type1_id` | `INTEGER` | タイプ1 (types.idへのFK) |
+| `type2_id` | `INTEGER` | タイプ2 (types.idへのFK) |
+| `gender_ratio_id` | `INTEGER` | 性別比率ID (gender_ratios.idへのFK) |
+
+### 2. `types` - タイプマスター
+ポケモンのタイプを格納する。
+| カラム名 | 型 | 説明 |
+|:---|:---|:---|
+| `id` | `SERIAL` | 主キー |
+| `name` | `VARCHAR(255)` | タイプ名 (例: ほのお, みず) |
+
+### 3. `gender_ratios` - 性別比率マスター
+性別のパターンを格納する。
+| カラム名 | 型 | 説明 |
+|:---|:---|:---|
+| `id` | `SERIAL` | 主キー |
+| `name` | `VARCHAR(255)` | パターン名 (例: 基本, オスのみ) |
+| `male_ratio` | `DECIMAL` | オスの比率 |
+| `female_ratio` | `DECIMAL` | メスの比率 |
+| `genderless_ratio` | `DECIMAL` | 性別不明の比率 (フラグとして利用) |
+
+### 4. `type_chart` - タイプ相性表
+タイプ間の相性関係を格納する。
+| カラム名 | 型 | 説明 |
+|:---|:---|:---|
+| `id` | `SERIAL` | 主キー |
+| `attacking_type_id` | `INTEGER` | 攻撃側タイプのID (types.idへのFK) |
+| `defending_type_id` | `INTEGER` | 防御側タイプのID (types.idへのFK) |
+| `multiplier` | `DECIMAL` | 相性倍率 (例: 2, 0.5, 0) |
+
+### 5. `moves` - 技マスター
+技の情報を格納する。
+| カラム名 | 型 | 説明 |
+|:---|:---|:---|
+| `id` | `SERIAL` | 主キー |
+| `name` | `VARCHAR(255)` | 技名 |
+| `type_id` | `INTEGER` | 技のタイプ (types.idへのFK) |
+| `power` | `INTEGER` | 威力 |
+| `accuracy` | `INTEGER` | 命中率 |
+| `pp` | `INTEGER` | PP |
+| `category` | `VARCHAR(50)` | 分類（物理/特殊/変化） |
+
+### 6. `items` - 持ち物マスター
+持ち物の情報を格納する。
+| カラム名 | 型 | 説明 |
+|:---|:---|:---|
+| `id` | `SERIAL` | 主キー |
+| `name` | `VARCHAR(255)` | 持ち物名 |
+| `description` | `TEXT` | 持ち物の効果 |
+
+### 7. `natures` - 性格マスター
+性格の情報を格納する。
+| カラム名 | 型 | 説明 |
+|:---|:---|:---|
+| `id` | `SERIAL` | 主キー |
+| `name` | `VARCHAR(255)` | 性格名 (例: いじっぱり) |
+| `increased_stat` | `VARCHAR(50)` | 上昇する能力値 |
+| `decreased_stat` | `VARCHAR(50)` | 下降する能力値 |
+
+### 8. `pt_rental_sets` - レンタル個体 (プラチナ)
+プラチナで実際にレンタルできるポケモンの個体情報を格納する。
+| カラム名 | 型 | 説明 |
+|:---|:---|:---|
 | `id` | `SERIAL` | 主キー |
 | `pokemon_id` | `INTEGER` | ポケモンID (pokemons.idへのFK) |
-| `set_group` | `VARCHAR(50)` | どの周回で登場するかなどのグループ |
 | `nature_id` | `INTEGER` | 性格ID (natures.idへのFK) |
 | `item_id` | `INTEGER` | 持ち物ID (items.idへのFK) |
-| `moves` | `INTEGER[]` | 技IDの配列 (moves.idへのFK) |
 | `effort_values` | `JSONB` | 努力値 |
+
+### 9. `pt_rental_set_moves` - レンタル個体の技 (プラチナ)
+レンタル個体と技を関連付ける中間テーブル。
+| カラム名 | 型 | 説明 |
+|:---|:---|:---|
+| `id` | `SERIAL` | 主キー |
+| `rental_set_id` | `INTEGER` | レンタル個体ID (pt_rental_sets.idへのFK) |
+| `move_id` | `INTEGER` | 技ID (moves.idへのFK) |
+
+
+参考にした記事
+https://yakkun.com/dp/zukan/list.htm
